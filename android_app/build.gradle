@@ -1,0 +1,7 @@
+// 顶层构建脚本（现代 AGP 8 / Gradle 8 写法）
+// 依赖仓库统一在 settings.gradle 的 dependencyResolutionManagement 中声明，
+// 这里只声明插件版本（apply false），由 app 模块按需 apply。
+plugins {
+    id 'com.android.application' version '8.2.2' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+}
