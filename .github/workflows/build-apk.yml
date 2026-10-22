@@ -18,11 +18,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3   # 安装 cmdline-tools 并自动接受 license
+      # GitHub runner 已预装 Android SDK（含 cmdline-tools），直接用其 sdkmanager，
+      # 不再使用 android-actions/setup-android（其新版会安装已废弃的 tools 包而报错）
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: Install SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        run: "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build debug APK
         uses: gradle/gradle-build-action@v3
