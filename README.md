@@ -37,14 +37,22 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 - MQTT broker：固件 `MQTT_SERVER` / `MQTT_PORT`
 - 热点密码：固件 `AP_PASSWORD`（App 内 `Constants.AP_PASSWORD` 需保持一致）
 
-## App 编译
+## 编译 / 获取成品（无需本地编译环境）
 
-完整安卓工程在 `android_app/`，代码已就绪。**推荐用 Android Studio 打开 `android_app/`
-→ Build → Build APK(s) 一键生成 `app-debug.apk`**（见其目录内 README）。
+两个工程都配好了 **GitHub Actions**，推送或手动触发即自动出包，在网页 Artifacts 区下载即可：
 
-> 注：本环境因大文件下载限速，未能在此直接编译出 APK 文件；工程本身完整可编译，你在
-> 本机 Android Studio 中约 1 分钟即可出包。若公共 MQTT 端口 1883 被某些网络封锁，可把
-> 固件与 App 的 broker 改为支持 WebSocket 的 `broker.emqx.io:8083`（代码已预留 `MQTT_PORT`）。
+| 产物 | 工作流 | 下载内容 | 用途 |
+|------|--------|----------|------|
+| 安卓 App | `build-apk.yml` | `app-debug.apk` | 手机安装控制端 |
+| 固件镜像 | `build-firmware.yml` | `merged-firmware.bin` | 烧录到 ESP8266 |
+
+- 进仓库 **Actions** 标签页 → 对应工作流 → 运行记录底部 **Artifacts** 下载。
+  （手机 GitHub App 不能直接下产物，请用**手机浏览器桌面模式**或电脑下载。）
+- 安卓工程也可在本机 Android Studio 打开 `android_app/` → Build → Build APK(s)。
+- 固件也可在本地用 PlatformIO（`pio run -t upload`）或 Arduino IDE 烧录，详见 `esp8266_controller/README.md`。
+
+> 若公共 MQTT 端口 1883 被某些网络封锁，可把固件与 App 的 broker 改为支持 WebSocket 的
+> `broker.emqx.io:8083`（代码已预留 `MQTT_PORT`）。
 
 > 说明：公共 MQTT broker 是开放的，消息理论上对同 topic 可见；本方案用随机 clientId +
 > 设备ID 隔离，适合个人/实验用途。如需更强隐私，可自建 MQTT broker 或改用 TLS 端口 8883。

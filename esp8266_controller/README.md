@@ -31,6 +31,25 @@ pio run -t upload        # 烧录
 pio device monitor       # 看串口日志
 ```
 
+### 方式 C：下载 GitHub Actions 预编译固件（无需本地编译环境）
+本仓库已配置 GitHub Actions（`build-firmware.yml`），每次推送都会自动编译出
+**合并好的单文件镜像 `merged-firmware.bin`**（已含 bootloader + 分区表 + 应用固件），
+在网页上即可下载烧录，不必安装任何工具链：
+
+1. 打开仓库 **Actions** 标签页 → 选 **Build ESP8266 Firmware** 工作流 → 进入一次运行
+2. 底部 **Artifacts** 区下载 **`esp8266-firmware`**（即 `merged-firmware.bin`）
+   - 手机 GitHub App 不能直接下载产物，请用**手机浏览器（桌面模式）**或电脑下载
+3. 把 ESP8266 进入**烧录模式**（按住 BOOT/FLASH 键 → 按一下 RST → 松开 BOOT），再烧录：
+   - **命令行（esptool，任意系统）**：
+     ```bash
+     esptool.py write_flash --flash_mode dout --flash_freq 40m --flash_size 4MB 0x00000 merged-firmware.bin
+     ```
+   - **Windows 图形工具（Espressif Flash Download Tool）**：
+     加载 `merged-firmware.bin` 到地址 `0x00000`，**SPI MODE = DIO**，**FLASH SIZE = 4MB**，
+     选好 COM 口后点 START。
+   > 多数 ESP-12F / NodeMCU / Wemos D1 Mini 为 4MB Flash；若你的板子是 1MB，请把
+   > `platformio.ini` 的 `board` 或 `board_build.flash_size` 改小后重新编译。
+
 ## 配网步骤（与 App 配套）
 1. 上电后手机 WiFi 列表会出现 `ESP_XXXXXX` 热点，连上（密码 `espconfig`）
 2. 打开手机 App → 自动进入「配网」页 → 选择该热点 → 输入你家 WiFi 的 SSID/密码 → 发送

@@ -1,0 +1,37 @@
+name: Build ESP8266 Firmware
+
+on:
+  workflow_dispatch:        # 允许在 GitHub 网页手动触发
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'esp8266_controller/**'
+      - '.github/workflows/build-firmware.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO and esptool
+        run: 'python -m pip install --upgrade pip && pip install platformio esptool'
+
+      - name: Build firmware
+        run: 'cd esp8266_controller && pio run'
+
+      # 把 bootloader + partitions + 应用固件 合并成单个可烧录镜像，方便用户一键烧录
+      - name: Merge into a single flashable binary
+        run: 'esptool.py merge_bin -o esp8266_controller/merged-firmware.bin 0x00000 esp8266_controller/.pio/build/generic_esp8266/bootloader.bin 0x8000 esp8266_controller/.pio/build/generic_esp8266/partitions.bin 0x10000 esp8266_controller/.pio/build/generic_esp8266/firmware.bin'
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp8266-firmware
+          path: esp8266_controller/merged-firmware.bin
