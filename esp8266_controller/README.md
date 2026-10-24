@@ -32,21 +32,23 @@ pio device monitor       # 看串口日志
 ```
 
 ### 方式 C：下载 GitHub Actions 预编译固件（无需本地编译环境）
-本仓库已配置 GitHub Actions（`build-firmware.yml`），每次推送都会自动编译出
-**合并好的单文件镜像 `merged-firmware.bin`**（已含 bootloader + 分区表 + 应用固件），
-在网页上即可下载烧录，不必安装任何工具链：
+本仓库已配置 GitHub Actions（`build-firmware.yml`），每次推送都会自动编译出固件
+`esp8266-io-controller-0x00000.bin`，在网页上即可下载烧录，不必安装任何工具链：
 
 1. 打开仓库 **Actions** 标签页 → 选 **Build ESP8266 Firmware** 工作流 → 进入一次运行
-2. 底部 **Artifacts** 区下载 **`esp8266-firmware`**（即 `merged-firmware.bin`）
+2. 底部 **Artifacts** 区下载 **`esp8266-firmware`**（内含 `.bin` 与 `.elf`）
    - 手机 GitHub App 不能直接下载产物，请用**手机浏览器（桌面模式）**或电脑下载
 3. 把 ESP8266 进入**烧录模式**（按住 BOOT/FLASH 键 → 按一下 RST → 松开 BOOT），再烧录：
    - **命令行（esptool，任意系统）**：
      ```bash
-     esptool.py write_flash --flash_mode dout --flash_freq 40m --flash_size 4MB 0x00000 merged-firmware.bin
+     esptool.py write_flash --flash_mode dout --flash_freq 40m --flash_size 4MB 0x00000 esp8266-io-controller-0x00000.bin
      ```
    - **Windows 图形工具（Espressif Flash Download Tool）**：
-     加载 `merged-firmware.bin` 到地址 `0x00000`，**SPI MODE = DIO**，**FLASH SIZE = 4MB**，
+     加载该 `.bin` 到地址 `0x00000`，**SPI MODE = DIO**，**FLASH SIZE = 4MB**，
      选好 COM 口后点 START。
+
+   > ESP8266 没有 ESP32 那种分区表（不存在 bootloader.bin / partitions.bin），
+   > PlatformIO 只产出一个 `firmware.bin`，**烧录地址固定为 0x0**，别按 ESP32 的 0x10000 烧。
    > 多数 ESP-12F / NodeMCU / Wemos D1 Mini 为 4MB Flash；若你的板子是 1MB，请把
    > `platformio.ini` 的 `board` 或 `board_build.flash_size` 改小后重新编译。
 
@@ -55,12 +57,27 @@ pio device monitor       # 看串口日志
 2. 打开手机 App → 自动进入「配网」页 → 选择该热点 → 输入你家 WiFi 的 SSID/密码 → 发送
 3. ESP 重启后自动连网，App 自动切换到「控制」页，四个按钮即可远程控制
 
+## v1.1 新增：运行状态与恢复出厂
+
+设备联网后仍提供 HTTP 服务（`http://<设备IP>/...`，热点模式下是 `http://192.168.4.1/...`）：
+
+| 接口 | 作用 |
+|------|------|
+| `GET /` | 接口说明页 |
+| `GET /status` | 返回 deviceId、固件版本、当前模式、IP、RSSI、MQTT 连接状态、四路引脚电平 |
+| `GET /reset` | 清除 WiFi 配置并重启，重新进入热点配网状态 |
+
+另外，**按住 FLASH（GPIO0）键再上电并持续 2 秒**，也会清空配置（串口会打印
+`[Boot] reset key held...`）。
+
 ## 重配网
-App 控制页点「重新配网」会清除已存设备ID，ESP 下次启动会重新开热点。
-也可在串口监视器看到 deviceId 与连接状态。
+App 控制页点「重新配网」只清除手机侧保存的设备ID；要让 ESP 重新开热点，需要访问
+`/reset` 或用上面的 FLASH 键方式清除 ESP 里的 WiFi 配置。
+串口监视器（115200）可以看到 deviceId 与连接状态。
 
 ## 自定义
 - 脉冲宽度：改 `#define PULSE_MS 500`
 - MQTT broker：改 `MQTT_SERVER` / `MQTT_PORT`
-- 热点密码：改 `AP_PASSWORD`
-- 引脚：改 `GPIOS[]` 数组
+- 热点密码：改 `AP_PASSWORD`（App 端 `Constants.AP_PASSWORD` 要同步改）
+- 引脚：改 `GPIOS[]` 数组（App 端 `Constants.GPIO_PINS` 顺序要同步改）
+- 心跳间隔：`HEARTBEAT_MS`；遗嘱消息默认发布 `{"status":"offline"}`

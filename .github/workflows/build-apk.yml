@@ -26,12 +26,27 @@ jobs:
       - name: Install SDK packages
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"'
 
-      - name: Build debug APK
-        uses: gradle/gradle-build-action@v3
+      # 仓库里不提交 gradle-wrapper.jar，构建时用 runner 自带的 gradle 现生成 wrapper，
+      # 这样 Gradle 版本固定（AGP 8.2.2 需要 Gradle 8.x），也便于缓存依赖。
+      # 初版使用的 gradle/gradle-build-action 已归档，这里换成官方 gradle/actions。
+      - name: Generate Gradle wrapper
+        working-directory: android_app
+        run: |
+          if command -v gradle >/dev/null 2>&1; then
+            gradle wrapper --gradle-version 8.5 --distribution-type bin
+          else
+            echo "::error::gradle not found on runner"
+            exit 1
+          fi
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.5
           build-root-directory: android_app
-          arguments: assembleDebug
+
+      - name: Build debug APK
+        working-directory: android_app
+        run: './gradlew --no-daemon assembleDebug'
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

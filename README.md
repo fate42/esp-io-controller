@@ -23,12 +23,25 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 ## 使用流程
 
 1. **烧录固件**：用 Arduino IDE（或 PlatformIO）把 `esp8266_controller/esp8266_controller.ino`
-   烧录到 ESP8266（详见其目录内 README）。
-2. **配网**：ESP 上电后，手机 WiFi 列表出现 `ESP_XXXXXX` 热点，连上（密码 `espconfig`）；
-   打开 App → 自动进入「配网」页 → 点「扫描 ESP 热点」→ 选中热点 → 输入家中 WiFi
+   烧录到 ESP8266（详见其目录内 README）。CI 产出的 `esp8266-io-controller-0x00000.bin`
+   烧录地址为 **0x0**（不是 ESP32 的 0x10000）。
+2. **配网**：ESP 上电后，手机 WiFi 列表出现 `ESP_XXXXXX` 热点（密码 `espconfig`）；
+   打开 App → 自动进入「配网」页 → 点「扫描 ESP 热点」→ 选中热点 →
+   **首次连接时系统可能弹出"允许加入网络"确认框，请点允许** → 输入家中 WiFi
    SSID/密码 → 点「发送配置并连接」。
-3. **控制**：配置成功后 App 自动切回手机 WiFi 并进入「控制」页，四个按钮即可远程触发
-   对应 GPIO 的 500ms 高脉冲。
+   - Android 10 以上不再使用已废弃的 `addNetwork` 接口，改为
+     `WifiNetworkSpecifier + requestNetwork`，并在请求里移除 `NET_CAPABILITY_INTERNET`
+     （否则系统认为热点"没有互联网"而拒绝回调）。
+   - 发送配置前 App 会把进程绑定到热点网络（`bindProcessToNetwork`），否则
+     `http://192.168.4.1` 的请求会被蜂窝数据劫持而超时。
+   - Android 14 对 `startScan()` 有频率限制：若列表扫不到，请先在系统 WiFi 设置里手动
+     连上 `ESP_XXXXXX`，再回 App 点「我已手动连上 ESP 热点（绑定该网络）」。
+3. **控制**：配置成功后 App 进入「控制」页，四个按钮即可远程触发对应 GPIO 的 500ms 高脉冲；
+   页面顶部会显示设备在线/离线（离线由固件 MQTT 遗嘱消息或心跳超时判定）。
+
+**恢复出厂（忘记/改了路由器密码时）**：两种方式任选
+- 访问 `http://<ESP的IP>/reset`（联网状态）或 `http://192.168.4.1/reset`（热点状态）；
+- 或者：按住开发板上的 FLASH（GPIO0）键再上电，持续 2 秒。
 
 ## 自定义
 
@@ -44,7 +57,7 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 | 产物 | 工作流 | 下载内容 | 用途 |
 |------|--------|----------|------|
 | 安卓 App | `build-apk.yml` | `app-debug.apk` | 手机安装控制端 |
-| 固件镜像 | `build-firmware.yml` | `merged-firmware.bin` | 烧录到 ESP8266 |
+| 固件镜像 | `build-firmware.yml` | `esp8266-io-controller-0x00000.bin` | 烧录到 ESP8266（地址 0x0） |
 
 - 进仓库 **Actions** 标签页 → 对应工作流 → 运行记录底部 **Artifacts** 下载。
   （手机 GitHub App 不能直接下产物，请用**手机浏览器桌面模式**或电脑下载。）

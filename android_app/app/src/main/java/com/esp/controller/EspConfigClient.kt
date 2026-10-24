@@ -1,19 +1,28 @@
 package com.esp.controller
 
+import android.net.Network
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
 /**
  * 通过 ESP 的热点网关(192.168.4.1)发送 WiFi 配置。
- * 成功返回设备ID，失败返回 null。
+ *
+ * v1.1 关键修复：必须把请求绑到"ESP 热点"这个 Network 上。
+ * ESP 热点没有互联网出口，Android 会把默认网络切到蜂窝数据，
+ * 直接用 URL.openConnection() 发往 192.168.4.1 会走移动数据而超时。
+ * 这里统一用 network.openConnection(url)，保证流量走 WiFi。
+ *
+ * @param network 由 ProvisionActivity 通过 bindProcessToNetwork 持有的热点网络；为 null 时退回默认网络
+ * @return 成功返回设备ID，失败返回 null
  */
 object EspConfigClient {
 
-    fun sendConfig(ssid: String, password: String): String? {
+    fun sendConfig(network: Network?, ssid: String, password: String): String? {
         return try {
             val url = URL(Constants.CONFIG_URL)
-            val conn = url.openConnection() as HttpURLConnection
+            val conn = (network?.openConnection(url)
+                ?: url.openConnection()) as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.connectTimeout = 10000

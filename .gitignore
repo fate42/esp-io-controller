@@ -2,6 +2,8 @@
 android_app/app/build/
 build/
 .gradle/
+.pio/
+dist/
 *.apk
 local.properties
 

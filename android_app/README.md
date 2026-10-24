@@ -17,7 +17,20 @@ Kotlin + Gradle 原生安卓工程，配合 `esp8266_controller` 固件使用。
 
 - `INTERNET`：连接 MQTT broker
 - `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE`：连接 ESP 配网热点
-- `ACCESS_FINE_LOCATION`：Android 10+ 扫描 WiFi 列表需要（仅用于发现 ESP 热点，不收集位置）
+- `ACCESS_FINE_LOCATION`（≤ Android 12）/ `NEARBY_WIFI_DEVICES`（Android 13+）：
+  扫描 WiFi 列表需要，声明为 `neverForLocation`，不采集位置
+- `CHANGE_NETWORK_STATE` / `WAKE_LOCK`：绑定配网网络、保持 MQTT 长连接
+
+## v1.1 配网链路说明（Android 10+ 必须这样写）
+
+1. 连接热点用 `WifiNetworkSpecifier` + `ConnectivityManager.requestNetwork()`，
+   并且 NetworkRequest **必须 `removeCapability(NET_CAPABILITY_INTERNET)`** ——
+   ESP 热点没有互联网出口，保留该能力系统会一直不给 `onAvailable` 回调。
+   旧的 `WifiManager.addNetwork/enableNetwork` 在 Android 10+ 已失效（返回 -1）。
+2. 拿到 `Network` 后调用 `bindProcessToNetwork(network)`，并用
+   `network.openConnection(url)` 发 HTTP —— 否则 `192.168.4.1` 的请求会走蜂窝数据而超时。
+3. Android 14 对 `startScan()` 有频率限制：扫不到时，可在系统 WiFi 设置里手动连
+   `ESP_XXXXXX`，回 App 点「我已手动连上 ESP 热点（绑定该网络）」。
 
 ## 构建方式
 
@@ -74,8 +87,13 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 ## 故障排查
 
-- **配网页扫描不到 ESP 热点**：确认 ESP 已上电；Android 10+ 需授予定位权限且打开系统定位；
-  偶尔需点「扫描」多试几次。也可手动在系统 WiFi 设置里连上 `ESP_XXXXXX` 后再回 App 发送配置。
+- **配网页扫描不到 ESP 热点**：确认 ESP 已上电；Android 10+ 需授予 WiFi/定位权限且打开系统定位；
+  偶尔需点「扫描」多试几次。也可手动在系统 WiFi 设置里连上 `ESP_XXXXXX` 后，
+  回 App 点「我已手动连上 ESP 热点（绑定该网络）」。
+- **点了热点但提示"连接失败/系统未给出可用网络"**：Android 10+ 首次连接会弹系统确认框，
+  必须点允许；同时确认热点密码与固件 `AP_PASSWORD` 一致。
+- **连上热点但"配置失败"**：说明 HTTP 没走 WiFi，检查是否已成功绑定网络；
+  可用手机浏览器（先关掉移动数据）访问 `http://192.168.4.1/status` 验证链路。
 - **控制页一直「MQTT: 断开」**：检查手机是否连着有外网的 WiFi；部分网络会封锁 1883 端口，
   可把固件与 App 的 broker 改成支持 WebSocket 的 `broker.emqx.io:8083`（代码已预留 `MQTT_PORT`）。
 - **按钮按下无反应**：看 ESP 串口日志是否收到 `{"pin":...}` 与 `[IO] pin X -> HIGH`；

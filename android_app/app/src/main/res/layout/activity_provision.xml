@@ -64,6 +64,13 @@
             android:text="发送配置并连接" />
 
         <Button
+            android:id="@+id/btnBindCurrent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="我已手动连上 ESP 热点（绑定该网络）" />
+
+        <Button
             android:id="@+id/btnSkip"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
