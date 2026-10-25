@@ -312,16 +312,17 @@ class ProvisionActivity : AppCompatActivity() {
         tvStatus.append("\n正在发送配置到 ${selectedAp ?: "ESP 热点"}…")
         btnSend.isEnabled = false
         Thread {
-            val deviceId = EspConfigClient.sendConfig(network, homeSsid, homePass)
+            val identity = EspConfigClient.sendConfig(network, homeSsid, homePass)
             runOnUiThread {
                 btnSend.isEnabled = true
-                if (deviceId != null) {
+                if (identity != null) {
                     // 加入设备列表并设为当前（Prefs 同时写一份，兼容老版本读取）
-                    DeviceStore.add(this, Device(deviceId, deviceId))
-                    Prefs.setDeviceId(this, deviceId)
-                    tvStatus.append("\n配置成功，设备ID=$deviceId")
+                    DeviceStore.add(this, Device(identity.id, identity.id, identity.key))
+                    Prefs.setDeviceId(this, identity.id)
+                    val secureNote = if (identity.key.isNotEmpty()) "（已配对密钥，安全模式）" else "（未获得密钥）"
+                    tvStatus.append("\n配置成功，设备ID=${identity.id}$secureNote")
                     releaseNetwork()          // 解绑，让流量回到正常网络
-                    toast("已添加设备 $deviceId")
+                    toast("已添加设备 ${identity.id}")
                     handler.postDelayed({ finishProvision() }, 800)
                 } else {
                     tvStatus.append("\n配置失败：请确认手机仍连着 ESP 热点（可用浏览器访问 192.168.4.1/status 验证）")

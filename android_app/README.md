@@ -9,7 +9,7 @@ Kotlin + Gradle 原生安卓工程，配合 `esp8266_controller` 固件使用。
 ## 功能
 
 - **控制页（ControlActivity，App 打开后的默认界面）**：四个大按钮对应 GPIO12/13/14/16；
-  按下即向 `esp8266/<deviceId>/cmd` 发布 `{"pin":X}`，触发 ESP 输出 500ms 高脉冲。
+  按下即向 `io/<deviceId>/cmd` 发布 `{"pin":X,"key":"..."}`（v1.3 起带配对密钥），触发 ESP 输出 500ms 高脉冲。
   顶部下拉框在多台设备间切换，右上角「设置」进设置页；没有设备时显示空状态引导添加。
 - **设置页（SettingsActivity）**：三种方式添加设备 ——
   ① 给新 ESP 配网（开热点，走 `ProvisionActivity`）；
@@ -18,8 +18,9 @@ Kotlin + Gradle 原生安卓工程，配合 `esp8266_controller` 固件使用。
 - **配网页（ProvisionActivity）**：扫描并连接 ESP 热点 `ESP_XXXXXX`，把家中 WiFi 账号密码
   通过 `http://192.168.4.1/config` 发给 ESP；成功后写入设备列表并返回设置页。
 
-> 多台手机控制同一台 ESP 的原理：命令走公共 MQTT 主题 `esp8266/<deviceId>/cmd`，
-> 任何保存了该 deviceId 的手机都能发布与订阅，所以"分享设备"就是把 deviceId 交给对方。
+> 多台手机控制同一台 ESP 的原理（v1.3）：每台 ESP 在配网时由固件生成随机 `deviceId` + `secretKey`，
+> 命令走随机主题 `io/<deviceId>/cmd` 且必须带正确密钥才执行；"分享设备"就是把这份 (id, key)
+> 交给另一部手机——设置页的「生成二维码」会把二者一起编码，对方「扫码添加」即可配对控制。
 
 ## 权限说明
 

@@ -116,7 +116,7 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    /** 兼容三种二维码内容：JSON、espctl:// 链接、纯设备ID */
+    /** 兼容三种二维码内容：JSON、espctl:// 链接、纯设备ID（v1.3 二维码含 key） */
     private fun parseScanned(text: String): Device? {
         val s = text.trim()
         return try {
@@ -124,12 +124,17 @@ class SettingsActivity : AppCompatActivity() {
                 s.startsWith("{") -> {
                     val o = JSONObject(s)
                     val id = o.optString("id", o.optString("deviceId", ""))
-                    if (id.isEmpty()) null else Device(id, o.optString("name", id).ifEmpty { id })
+                    if (id.isEmpty()) null else Device(
+                        id,
+                        o.optString("name", id).ifEmpty { id },
+                        o.optString("key", "")
+                    )
                 }
                 s.startsWith("espctl://") -> {
                     val id = s.substringAfter("device/").substringBefore("?").substringBefore("/")
                     val name = s.substringAfter("name=", "").substringBefore("&")
-                    if (id.isEmpty()) null else Device(id, name.ifEmpty { id })
+                    val key = s.substringAfter("key=", "").substringBefore("&")
+                    if (id.isEmpty()) null else Device(id, name.ifEmpty { id }, key)
                 }
                 else -> if (s.isBlank()) null else Device(s, s)
             }
@@ -180,6 +185,7 @@ class SettingsActivity : AppCompatActivity() {
         val payload = JSONObject().apply {
             put("id", device.id)
             put("name", device.name)
+            put("key", device.key)        // v1.3：二维码携带密钥，扫码即可配对控制
         }.toString()
 
         val bitmap: Bitmap? = try {
@@ -192,8 +198,9 @@ class SettingsActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
         val iv = ImageView(this).apply { setImageBitmap(bitmap) }
+        val secureHint = if (device.key.isNotEmpty()) "（已配对密钥，扫码可安全控制）" else "（无密钥：仅兼容遗留设备）"
         val tv = TextView(this).apply {
-            text = "${getString(R.string.qr_title)}\n${device.id}"
+            text = "${getString(R.string.qr_title)}\n${device.id}\n$secureHint"
             textSize = 13f
             setPadding(0, 16, 0, 0)
         }
@@ -203,9 +210,9 @@ class SettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setView(layout)
             .setNegativeButton("关闭", null)
-            .setPositiveButton("复制设备ID") { _, _ ->
+            .setPositiveButton("复制分享信息") { _, _ ->
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.setPrimaryClip(ClipData.newPlainText("deviceId", device.id))
+                cm.setPrimaryClip(ClipData.newPlainText("esp_share", payload))
                 toast(getString(R.string.copied))
             }
             .show()

@@ -69,7 +69,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="多台手机控制同一台 ESP：在这台手机上选中设备 →「生成二维码」，另一台手机安装本 App 后用「扫码添加设备」扫一下即可。控制走 MQTT 主题 esp8266/&lt;设备ID&gt;/cmd，所有保存了该设备ID 的手机都能同时控制。"
+            android:text="多台手机控制同一台 ESP：在这台手机上选中设备 →「生成二维码」（二维码含设备ID与密钥），另一台手机安装本 App 后用「扫码添加设备」扫一下即可配对。v1.3 起 MQTT 主题为随机的 io/&lt;设备ID&gt;/cmd 且命令需带密钥，只有持有密钥的手机才能控制。"
             android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>

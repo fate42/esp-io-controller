@@ -5,18 +5,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 设备仓库：一个 App 可保存多台 ESP 设备，多台手机保存同一个 deviceId 即可同时控制。
+ * 设备仓库：一个 App 可保存多台 ESP 设备，多台手机保存同一份配对信息即可同时控制。
  *
- * 之所以能让"多部手机控制同一台 ESP"：控制命令走的是 MQTT 主题
- * esp8266/<deviceId>/cmd，任何知道 deviceId 的客户端都能订阅与发布。
- * 所以"把设备分享给别人"本质上就是把这个 deviceId 告诉对方（扫码/手动输入均可）。
+ * v1.3 安全模型：每台 ESP 在配网时由固件生成随机 deviceId + secretKey（密钥）。
+ * 控制命令走主题 io/<deviceId>/cmd，且 payload 必须带正确的 key 才执行。
+ * 所以"把设备分享给另一部手机"就是把这个 (deviceId, key) 一并告诉对方——扫码二维码
+ * （二维码里同时含 id 与 key）是推荐方式；手动输入只能填 id（适合遗留未注册密钥的设备）。
  *
  * 存储：SharedPreferences 里存一个 JSON 数组
- *   {"selected":"ESP_A1B2C3",
- *    "devices":[{"id":"ESP_A1B2C3","name":"客厅灯"}, ...]}
+ *   {"selected":"a1b2c3d4...",
+ *    "devices":[{"id":"a1b2c3d4...","name":"客厅灯","key":"...."}, ...]}
  * 用 Android 自带的 org.json，避免引入 Gson。
  */
-data class Device(val id: String, val name: String)
+data class Device(val id: String, val name: String, val key: String = "")
 
 object DeviceStore {
 
@@ -33,7 +34,9 @@ object DeviceStore {
             val out = mutableListOf<Device>()
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
-                out.add(Device(o.getString("id"), o.optString("name", o.getString("id"))))
+                out.add(Device(o.getString("id"),
+                    o.optString("name", o.getString("id")),
+                    o.optString("key", "")))
             }
             out
         } catch (e: Exception) {
@@ -47,6 +50,7 @@ object DeviceStore {
             val o = JSONObject()
             o.put("id", it.id)
             o.put("name", it.name)
+            o.put("key", it.key)
             arr.put(o)
         }
         sp(ctx).edit().putString(KEY_DEVICES, arr.toString()).apply()

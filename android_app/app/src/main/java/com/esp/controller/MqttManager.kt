@@ -10,11 +10,13 @@ import java.util.concurrent.Executors
 /**
  * 基于纯 Java 版 Paho 客户端的 MQTT 封装（不依赖旧 support 库）。
  * - 连接公共 broker
- * - 订阅 esp8266/<deviceId>/state 接收状态（含设备 LWT 遗嘱消息 offline）
- * - 向 esp8266/<deviceId>/cmd 发布 {"pin":X} 触发 500ms 脉冲
+ * - 订阅 io/<deviceId>/state 接收状态（含设备 LWT 遗嘱消息 offline）
+ * - 向 io/<deviceId>/cmd 发布 {"pin":X,"key":"..."} 触发 500ms 脉冲（v1.3 起带密钥）
  *
  * v1.1 修复：disconnect() 不再关闭线程池（原实现关掉后同一实例无法再次 connect），
  * 线程池的关闭拆到 release()，只在 Activity 真正销毁时调用。
+ * v1.3 安全：命令必须带与设备配对的 key，固件校验通过才执行；key 为空时仅能控制
+ * 未注册密钥的遗留设备。
  */
 class MqttManager {
 
@@ -23,14 +25,16 @@ class MqttManager {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     var deviceId: String = ""
+    var deviceKey: String = ""        // 与设备配对的密钥；空=遗留兼容模式
     var onState: ((String) -> Unit)? = null
     var onConnectionChange: ((Boolean) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
     fun isConnected(): Boolean = client?.isConnected ?: false
 
-    fun connect(deviceId: String, onConnected: () -> Unit) {
+    fun connect(deviceId: String, key: String = "", onConnected: () -> Unit) {
         this.deviceId = deviceId
+        this.deviceKey = key
         if (executor.isShutdown) executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
@@ -65,7 +69,7 @@ class MqttManager {
                 })
                 c.connect(options)
                 client = c
-                c.subscribe("esp8266/$deviceId/state", 1)
+                c.subscribe(Constants.MQTT_TOPIC_PREFIX + deviceId + "/state", 1)
             } catch (e: Exception) {
                 e.printStackTrace()
                 mainHandler.post {
@@ -76,15 +80,16 @@ class MqttManager {
         }
     }
 
-    /** 发布 {"pin":X}，QoS1 保证至少送达一次 */
+    /** 发布 {"pin":X,"key":"..."}，QoS1 保证至少送达一次；key 在 v1.3 起由固件校验 */
     fun sendPulse(pin: Int): Boolean {
         val c = client
         if (c == null || !c.isConnected) {
             onError?.invoke("MQTT 未连接，脉冲未发出")
             return false
         }
-        val topic = "esp8266/$deviceId/cmd"
-        val payload = "{\"pin\":$pin}"
+        val topic = Constants.MQTT_TOPIC_PREFIX + deviceId + "/cmd"
+        val payload = if (deviceKey.isEmpty()) "{\"pin\":$pin}"
+                     else "{\"pin\":$pin,\"key\":\"$deviceKey\"}"
         executor.execute {
             try {
                 c.publish(topic, payload.toByteArray(), 1, false)
@@ -97,9 +102,9 @@ class MqttManager {
     }
 
     /** 切换控制目标：先断开旧连接（否则 broker 上会残留旧订阅），再连新设备 */
-    fun switchTo(deviceId: String, onConnected: () -> Unit = {}) {
+    fun switchTo(deviceId: String, key: String = "", onConnected: () -> Unit = {}) {
         disconnect()
-        connect(deviceId, onConnected)
+        connect(deviceId, key, onConnected)
     }
 
     /** 断开 MQTT 连接，但保留线程池，之后还能 connect() */

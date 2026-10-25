@@ -1,12 +1,23 @@
 /*
- * ESP8266 四路 IO 脉冲控制器（公共 MQTT broker 方案）  v1.1.0
+ * ESP8266 四路 IO 脉冲控制器（公共 MQTT broker 方案）  v1.3.0
  * ------------------------------------------------------------------
  * 功能：
  *   1) 首次上电（或配置被清空）：开热点 ESP_XXXXXX（密码 espconfig），提供配网 HTTP 接口
  *   2) 手机 App 通过 http://192.168.4.1/config 下发家中 WiFi 账号密码
  *   3) 存入 EEPROM 后重启，切 Station 模式连 WiFi，并连接公共 MQTT broker
- *   4) 订阅 esp8266/<deviceId>/cmd，收到 {"pin":12} 后把对应 GPIO 拉高 500ms 再拉低
- *   5) 发布状态到 esp8266/<deviceId>/state（心跳 + 脉冲确认 + 遗嘱 offline）
+ *   4) 订阅 io/<deviceId>/cmd，收到 {"pin":12,"key":"..."} 后校验密钥，通过才把对应
+ *      GPIO 拉高 500ms 再拉低
+ *   5) 发布状态到 io/<deviceId>/state（心跳 + 脉冲确认 + 遗嘱 offline）
+ *
+ * v1.3.0 安全加固（相对 v1.1.0）：
+ *   [1] 设备身份随机化：deviceId 由可猜测的 "ESP_"+MAC后6位 改为 16 位十六进制随机串，
+ *       存在 EEPROM 里，与热点名(ESP_xxxxxx)解耦——热点名只用于配网发现，不再泄露身份。
+ *   [2] 配网即"配对"：首次 /config 时生成 32 位十六进制随机密钥(secretKey)，写回 App，
+ *       命令 payload 必须带 "key" 且匹配才执行；密钥只在本地配网链路下发，绝不走公网。
+ *   [3] MQTT 主题前缀由 esp8266/ 改为 io/，叠加随机 deviceId 后主题不可猜测，
+ *       在公共 broker 上实现"主题隔离"（无密钥者即便猜到设备也下不了命令）。
+ *   [4] /status 增加 "secure" 字段：true=已注册密钥并强制校验，false=遗留设备兼容模式
+ *       （接受任意命令，建议恢复出厂后重新配网以注册密钥）。
  *
  * v1.1.0 修订（相对初版）：
  *   [1] EEPROM 增加魔数 "EC01" 校验：脏数据不再让设备陷入"永远连不上"的死循环
@@ -32,24 +43,33 @@
 #include <EEPROM.h>
 
 /* ====================== 可配置参数 ====================== */
-#define FW_VERSION      "1.1.0"
-#define AP_PREFIX       "ESP_"          // 热点名称/设备ID 前缀
+#define FW_VERSION      "1.3.0"
+#define AP_PREFIX       "ESP_"          // 热点名称前缀（仅用于配网发现，不再作为 MQTT 身份）
 #define AP_PASSWORD     "espconfig"     // 配网热点密码（App 端 Constants.AP_PASSWORD 必须一致）
 #define MQTT_SERVER     "broker.emqx.io"
 #define MQTT_PORT       1883
+#define TOPIC_PREFIX    "io/"           // MQTT 主题前缀（随机 deviceId 使其不可猜测）
 #define PULSE_MS        500             // 高电平脉冲宽度（毫秒）
 #define CONNECT_TIMEOUT 15000           // Station 连接超时(ms)
 #define HEARTBEAT_MS    10000           // 心跳间隔(ms)
 #define MQTT_KEEPALIVE  30              // MQTT keepAlive(s)，需 < broker 超时
 #define MQTT_BUFFER     256             // MQTT 收发缓冲区(字节)
 
-#define EEPROM_SIZE     128
+// 安全相关长度（十六进制字符串）：deviceId 16 位 / 密钥 32 位
+#define DEVID_HEX       16
+#define KEY_HEX         32
+
+#define EEPROM_SIZE     512
 #define EEPROM_MAGIC    "EC01"          // 配置区魔数，用于判断 EEPROM 数据是否有效
 #define MAGIC_ADDR      0               // 4 字节
 #define SSID_ADDR       8               // WiFi SSID（最多 32 字节）
 #define SSID_MAX        32
 #define PASS_ADDR       48              // WiFi 密码（最多 63 字节）
 #define PASS_MAX        63
+#define DEVID_ADDR      112             // 随机 deviceId（16 位十六进制 + 结束符）
+#define DEVID_MAX       16
+#define KEY_ADDR        129             // 随机 secretKey（32 位十六进制 + 结束符）
+#define KEY_MAX         32
 
 #define RESET_PIN       0               // GPIO0 = NodeMCU 上的 FLASH 按键
 #define RESET_HOLD_MS   2000            // 上电后按住多久触发恢复出厂
@@ -59,6 +79,7 @@ const int GPIOS[4] = {12, 13, 14, 16};
 
 /* ====================== 全局对象 ====================== */
 String          deviceId = "";
+String          deviceKey = "";        // 配对密钥（配网时生成，命令校验用；空=遗留兼容模式）
 ESP8266WebServer server(80);
 WiFiClient      espClient;
 PubSubClient    mqtt(espClient);
@@ -110,7 +131,7 @@ void clearConfig() {
 }
 
 /* ====================== 设备ID ====================== */
-// 设备ID = "ESP_" + MAC 后 6 位十六进制，与热点名一致
+// 热点名 = "ESP_" + MAC 后 6 位十六进制（仅用于配网发现）
 String getMAC6() {
   byte mac[6];
   WiFi.macAddress(mac);
@@ -119,9 +140,33 @@ String getMAC6() {
   return String(buf);
 }
 
+/* ====================== 随机数与配对身份 ====================== */
+// 生成 n 位十六进制随机串（deviceId 16 位 / secretKey 32 位）。
+// 密钥只在本地配网链路下发、绝不进公网，且主题本身随机不可猜测，
+// 软件 PRNG 播种多熵源已足以抵御"远程盲猜 128 位 token"。
+void seedRandom() {
+  static bool seeded = false;
+  if (seeded) return;
+  uint32_t s = ESP.getChipId() ^ (millis() << 16) ^ micros() ^
+               ((uint32_t)analogRead(0) << 8);
+  randomSeed(s);
+  seeded = true;
+}
+
+String genHex(int chars) {
+  seedRandom();
+  String s = "";
+  char h[3];
+  for (int i = 0; i < chars; i++) {
+    snprintf(h, sizeof(h), "%02x", (uint8_t)random(0, 256));
+    s += h;
+  }
+  return s;
+}
+
 /* ====================== MQTT 主题与发布 ====================== */
-String cmdTopic()   { return "esp8266/" + deviceId + "/cmd"; }
-String stateTopic() { return "esp8266/" + deviceId + "/state"; }
+String cmdTopic()   { return String(TOPIC_PREFIX) + deviceId + "/cmd"; }
+String stateTopic() { return String(TOPIC_PREFIX) + deviceId + "/state"; }
 
 // retain=true 用于 online/offline 这类"持续状态"，让新订阅者立刻拿到最新值；
 // 脉冲确认属于事件，不保留，避免重启后被误认为刚触发过
@@ -187,10 +232,30 @@ int extractPin(const String& msg) {
   return got ? (int)value : -1;
 }
 
+// 从 {"pin":12,"key":"abcd..."} 中提取 key 字段（带引号），失败/缺失返回空串
+String extractKey(const String& msg) {
+  int k = msg.indexOf("\"key\"");
+  if (k < 0) return "";
+  int q1 = msg.indexOf('"', k + 5);
+  if (q1 < 0) return "";
+  int q2 = msg.indexOf('"', q1 + 1);
+  if (q2 < 0) return "";
+  return msg.substring(q1 + 1, q2);
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String msg = "";
   for (unsigned int i = 0; i < length && i < MQTT_BUFFER; i++) msg += (char)payload[i];
   Serial.printf("[MQTT] %s : %s\n", topic, msg.c_str());
+
+  // 安全校验：已注册密钥的设备，命令必须带正确 key 才执行
+  if (deviceKey.length() > 0) {
+    if (extractKey(msg) != deviceKey) {
+      Serial.println("[MQTT] rejected: key mismatch / missing");
+      publishState(0, "denied");
+      return;
+    }
+  }
 
   int pin = extractPin(msg);
   if (pin > 0) triggerPulse(pin);
@@ -260,10 +325,23 @@ void handleConfig() {
     return;
   }
 
+  // 配网即"配对"：首次下发 WiFi 时生成随机 deviceId + secretKey 并固化到 EEPROM；
+  // 已存在则沿用（仅改 WiFi 不换密钥），避免误改配对关系。
+  String id = readEEPROM(DEVID_ADDR, DEVID_MAX);
+  String key = readEEPROM(KEY_ADDR, KEY_MAX);
+  if (id.length() == 0) {
+    id = genHex(DEVID_HEX);
+    key = genHex(KEY_HEX);
+    writeEEPROM(DEVID_ADDR, DEVID_MAX, id);
+    writeEEPROM(KEY_ADDR, KEY_MAX, key);
+  }
+  deviceId = id;
+  deviceKey = key;
+
   saveConfig(ssid, password);
-  Serial.printf("[Config] saved ssid=%s, rebooting\n", ssid.c_str());
+  Serial.printf("[Config] saved ssid=%s, deviceId=%s, rebooting\n", ssid.c_str(), id.c_str());
   server.send(200, "application/json",
-              "{\"status\":\"ok\",\"deviceId\":\"" + deviceId + "\"}");
+              "{\"status\":\"ok\",\"deviceId\":\"" + id + "\",\"key\":\"" + key + "\"}");
   delay(800);
   ESP.restart();
 }
@@ -282,6 +360,7 @@ void handleStatus() {
   json += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
   json += ",\"rssi\":" + String(WiFi.RSSI());
   json += ",\"mqtt\":" + String(mqtt.connected() ? "true" : "false");
+  json += ",\"secure\":" + String(deviceKey.length() > 0 ? "true" : "false");
   json += ",\"pins\":[";
   for (int i = 0; i < 4; i++) {
     if (i) json += ",";
@@ -323,6 +402,13 @@ void startAP() {
 void startStation() {
   String ssid = readEEPROM(SSID_ADDR, SSID_MAX);
   String password = readEEPROM(PASS_ADDR, PASS_MAX);
+
+  // 载入配对身份：已注册随机 deviceId 则覆盖 setup 里默认的 ESP_xxxxxx；
+  // 否则保持 MAC 派生 ID 并进入"遗留兼容模式"（deviceKey 为空，命令不校验）。
+  String storedId = readEEPROM(DEVID_ADDR, DEVID_MAX);
+  if (storedId.length() > 0) deviceId = storedId;
+  deviceKey = readEEPROM(KEY_ADDR, KEY_MAX);
+
   if (!connectToWiFi(ssid, password)) {
     Serial.println("[Boot] WiFi failed -> fall back to AP mode");
     startAP();

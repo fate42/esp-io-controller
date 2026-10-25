@@ -15,7 +15,8 @@ import androidx.appcompat.app.AppCompatActivity
  *   1) 不再一上来就跳配网页：即使没有设备也停留在本页，用空状态引导去「设置」添加。
  *   2) 顶部 Spinner 可在多台设备间切换（一个 App 可管多台 ESP）。
  *   3) 右上角「设置」进 SettingsActivity：配网新设备 / 扫码加入 / 二维码分享 / 删除重命名。
- *   4) 多部手机只要保存了同一个 deviceId，就能同时控制同一台 ESP（MQTT 主题天然支持）。
+ *   4) 多部手机只要保存了同一份配对信息(deviceId+key)，就能同时控制同一台 ESP
+ *      （MQTT 主题随机不可猜，且命令需带密钥才执行；扫码分享即可让另一部手机配对）。
  */
 class ControlActivity : AppCompatActivity() {
 
@@ -119,9 +120,11 @@ class ControlActivity : AppCompatActivity() {
         bindDevice(selected)
     }
 
-    /** 把 MQTT 连接到指定设备；已连接的是同一台就不重复连 */
+    /** 把 MQTT 连接到指定设备；已连接的是同一台（且密钥一致）就不重复连 */
     private fun bindDevice(deviceId: String) {
-        val name = DeviceStore.find(this, deviceId)?.name ?: deviceId
+        val dev = DeviceStore.find(this, deviceId)
+        val name = dev?.name ?: deviceId
+        val key = dev?.key ?: ""
         tvDevice.text = if (name == deviceId) "设备: $deviceId" else "设备: $name（$deviceId）"
 
         val manager = mqtt ?: MqttManager().also {
@@ -139,11 +142,11 @@ class ControlActivity : AppCompatActivity() {
             mqtt = it
         }
 
-        if (manager.deviceId == deviceId && manager.isConnected()) return
+        if (manager.deviceId == deviceId && manager.deviceKey == key && manager.isConnected()) return
         lastStateAt = 0L
         deviceOnline = false
         tvStatus.text = "MQTT: 连接中…"
-        manager.switchTo(deviceId) {}
+        manager.switchTo(deviceId, key) {}
     }
 
     private val watchdog = object : Runnable {

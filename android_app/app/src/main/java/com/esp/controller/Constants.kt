@@ -10,6 +10,8 @@ object Constants {
     /** 公共 MQTT broker（零成本） */
     const val MQTT_BROKER = "broker.emqx.io"
     const val MQTT_PORT = 1883
+    /** MQTT 主题前缀；与固件 TOPIC_PREFIX 保持一致（v1.3 起由 esp8266/ 改为 io/） */
+    const val MQTT_TOPIC_PREFIX = "io/"
     /** 四个受控 GPIO，顺序对应按钮 1~4 */
     val GPIO_PINS = intArrayOf(12, 13, 14, 16)
     /** 脉冲宽度（ms），仅展示用 */

@@ -7,13 +7,19 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 
 ```
  ESP8266（连你家WiFi）  ⇄  公共MQTT broker(broker.emqx.io:1883)  ⇄  安卓App
-        设备ID = "ESP_" + MAC后6位（与热点名一致）
+        配对身份 = 随机 deviceId(16hex) + secretKey(32hex)，配网时生成
 ```
 
-- 配网：ESP 首启开热点 `ESP_XXXXXX`（密码 `espconfig`），App 连上后在 App 内填家中
-  WiFi 账号密码并发送；ESP 保存后重启，自动连网并连上 broker。
-- 控制：App 发布 `esp8266/<deviceId>/cmd` → `{"pin":12}`；ESP 把对应 GPIO 拉高
-  500ms 再拉低，并回传状态到 `esp8266/<deviceId>/state`。
+- 配网：ESP 首启开热点 `ESP_XXXXXX`（密码 `espconfig`，仅用于配网发现），App 连上后在 App 内填家中
+  WiFi 账号密码并发送；ESP 保存后重启，自动连网并连上 broker，同时把随机 `deviceId` + `secretKey`
+  回传给 App（**密钥只在本地配网链路下发，绝不进公网**）。
+- 控制：App 发布 `io/<deviceId>/cmd` → `{"pin":12,"key":"..."}`；ESP 校验密钥通过后把对应 GPIO 拉高
+  500ms 再拉低，并回传状态到 `io/<deviceId>/state`。`deviceId` 随机不可猜测，未持密钥者即便连上 broker
+  也无法控制。
+
+> **v1.3 安全加固**：设备身份随机化 + 命令密钥校验 + MQTT 主题随机前缀，详见
+> `esp8266_controller/README.md` 的「v1.3 安全加固」一节。
+> 已烧旧固件且只配过网的设备，需**恢复出厂重新配网一次**才会注册密钥（详见该节迁移提示）。
 
 ## 目录
 
@@ -42,9 +48,10 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 3. **控制**：回到控制页，顶部下拉框选择设备（可保存多台），四个按钮即可远程触发
    对应 GPIO 的 500ms 高脉冲；页面显示设备在线/离线（固件 MQTT 遗嘱消息或心跳超时判定）。
 
-**多台手机同时控制同一台 ESP**：命令走 MQTT 主题 `esp8266/<deviceId>/cmd`，
-任何手机只要保存了这个 deviceId 就能订阅和发布，所以"把设备分享给别人"就是把
-deviceId 告诉对方（推荐扫码）。多台手机可同时在线、同时按键，固件收到一条就触发一次。
+**多台手机同时控制同一台 ESP**：每台 ESP 在配网时生成随机 `deviceId` + `secretKey`，
+命令走随机主题 `io/<deviceId>/cmd` 且必须带正确密钥才执行。所以"把设备分享给另一部手机"就是把
+这份 (id, key) 交给对方——设置页「生成二维码」会把二者一起编码，对方「扫码添加」即可配对控制
+（推荐扫码，不要只发 deviceId）。多台手机可同时在线、同时按键，固件收到一条就触发一次。
 
 **恢复出厂（忘记/改了路由器密码时）**：两种方式任选
 - 访问 `http://<ESP的IP>/reset`（联网状态）或 `http://192.168.4.1/reset`（热点状态）；
@@ -74,5 +81,6 @@ deviceId 告诉对方（推荐扫码）。多台手机可同时在线、同时�
 > 若公共 MQTT 端口 1883 被某些网络封锁，可把固件与 App 的 broker 改为支持 WebSocket 的
 > `broker.emqx.io:8083`（代码已预留 `MQTT_PORT`）。
 
-> 说明：公共 MQTT broker 是开放的，消息理论上对同 topic 可见；本方案用随机 clientId +
-> 设备ID 隔离，适合个人/实验用途。如需更强隐私，可自建 MQTT broker 或改用 TLS 端口 8883。
+> 说明：公共 MQTT broker 是开放的，消息理论上对同 topic 可见；本方案 v1.3 起用随机 deviceId +
+> 随机主题前缀 + 命令密钥三重隔离，未持密钥者无法控制，适合个人/实验用途。如需更强隐私，
+> 可自建带账号密码鉴权的 MQTT broker 或改用 TLS 端口 8883。

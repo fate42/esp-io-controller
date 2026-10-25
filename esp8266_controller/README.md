@@ -4,8 +4,8 @@
 - 首次上电开热点 `ESP_XXXXXX`（密码 `espconfig`），提供配网接口
 - 手机 App 连接该热点后，向 `http://192.168.4.1/config` 发送 WiFi 账号密码
 - ESP 保存到 EEPROM 并重启，切 Station 模式连 WiFi，连接公共 MQTT broker（`broker.emqx.io:1883`）
-- 订阅 `esp8266/<deviceId>/cmd`，收到 `{"pin":12}` 后把对应 GPIO 拉高 500ms 再拉低
-- 发布状态到 `esp8266/<deviceId>/state`（心跳 + 按键确认）
+- 订阅 `io/<deviceId>/cmd`，收到 `{"pin":12,"key":"..."}` 后校验密钥，通过才把对应 GPIO 拉高 500ms 再拉低
+- 发布状态到 `io/<deviceId>/state`（心跳 + 按键确认 + 遗嘱 offline）
 
 ## 引脚映射
 | 按钮 | GPIO | 说明 |
@@ -64,8 +64,8 @@ pio device monitor       # 看串口日志
 | 接口 | 作用 |
 |------|------|
 | `GET /` | 接口说明页 |
-| `GET /status` | 返回 deviceId、固件版本、当前模式、IP、RSSI、MQTT 连接状态、四路引脚电平 |
-| `GET /reset` | 清除 WiFi 配置并重启，重新进入热点配网状态 |
+| `GET /status` | 返回 deviceId、固件版本、当前模式、IP、RSSI、MQTT 连接状态、**secure（是否已注册密钥）**、四路引脚电平 |
+| `GET /reset` | 清除 WiFi 配置并重启，重新进入热点配网状态（会一并清空已注册的 deviceId/密钥） |
 
 另外，**按住 FLASH（GPIO0）键再上电并持续 2 秒**，也会清空配置（串口会打印
 `[Boot] reset key held...`）。
@@ -75,9 +75,30 @@ App 控制页点「重新配网」只清除手机侧保存的设备ID；要让 E
 `/reset` 或用上面的 FLASH 键方式清除 ESP 里的 WiFi 配置。
 串口监视器（115200）可以看到 deviceId 与连接状态。
 
+## v1.3 安全加固（重要）
+
+公共 MQTT broker 是开放的，v1.2 及更早版本里只要知道 `deviceId`（`ESP_`+MAC 后 6 位，可猜测）
+就能控制设备。v1.3 做了三层防护：
+
+1. **设备身份随机化**：`deviceId` 改为 16 位十六进制随机串（固化在 EEPROM），与热点名 `ESP_XXXXXX`
+   （仅用于配网发现）解耦；热点名不再泄露身份。
+2. **配网即配对**：首次配网（`POST /config`）时固件生成 32 位十六进制随机 `secretKey`，写回 App；
+   之后命令 payload 必须带 `{"key":"..."}` 且匹配才执行（不匹配返回 `{"status":"denied"}`）。
+   密钥**只在本地配网链路下发，绝不进公网**。
+3. **主题不可猜测**：MQTT 主题前缀由 `esp8266/` 改为 `io/`，叠加随机 `deviceId` 后主题无法枚举。
+
+> **迁移提示**：已烧录旧固件、仅配过网但未注册密钥的设备，OTA/重刷 v1.3 后仍处于「遗留兼容模式」
+> （`/status` 返回 `secure:false`，接受任意命令）。要启用安全模式，**必须恢复出厂重新配网一次**
+> （`/reset` 或按住 FLASH 键 2 秒），重配网时即生成并下发新密钥。多部手机控制同一台设备：
+> 在一部已配对的手机设置页「生成二维码」（含 id+key），其它手机「扫码添加」即可。
+>
+> 若追求更强隐私，仍建议自建带账号密码鉴权的 MQTT broker（改 `MQTT_SERVER` 并在连接时填入
+> 用户名/密码），或在 broker 侧启用 TLS（8883）。公共 broker 仅适合个人/实验用途。
+
 ## 自定义
 - 脉冲宽度：改 `#define PULSE_MS 500`
 - MQTT broker：改 `MQTT_SERVER` / `MQTT_PORT`
 - 热点密码：改 `AP_PASSWORD`（App 端 `Constants.AP_PASSWORD` 要同步改）
 - 引脚：改 `GPIOS[]` 数组（App 端 `Constants.GPIO_PINS` 顺序要同步改）
 - 心跳间隔：`HEARTBEAT_MS`；遗嘱消息默认发布 `{"status":"offline"}`
+- 设备身份长度：`DEVID_HEX` / `KEY_HEX`；主题前缀：`TOPIC_PREFIX`
