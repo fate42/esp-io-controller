@@ -1,0 +1,10 @@
+
+WARNING: This command is deprecated and will be removed in the next releases. 
+Please use `pio pkg install` instead.
+
+Platform Manager: espressif8266@4.2.1 is already installed
+[safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target": "C:\\Users\\23874\\.platformio\\.cache\\downloads\\usage.db.lock", "reason": "windows-sandbox-recycle-bin-unavailable"}
+[safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target": "C:\\Users\\23874\\.platformio\\.cache\\downloads\\usage.db.lock", "reason": "windows-sandbox-recycle-bin-unavailable"}
+[safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target": "C:\\Users\\23874\\.platformio\\.cache\\downloads\\usage.db.lock", "reason": "windows-sandbox-recycle-bin-unavailable"}
+[safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target": "C:\\Users\\23874\\.platformio\\platforms.lock", "reason": "windows-sandbox-recycle-bin-unavailable"}
+[safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target": "C:\\Users\\23874\\.platformio\\platforms.lock", "reason": "windows-sandbox-recycle-bin-unavailable"}

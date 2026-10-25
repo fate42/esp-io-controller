@@ -24,12 +24,33 @@
 3. 库管理器安装 `PubSubClient`
 4. 打开 `esp8266_controller.ino`，选好端口与 Flash 大小（4MB），上传
 
-### 方式 B：PlatformIO
+### 方式 B：VS Code + PlatformIO（推荐，本仓库默认方式）
+> 已用 VS Code 打开本文件夹即完成工程加载。`platformio.ini` 中 `board = esp12e`，
+> 与 ESP-12F 同属 ESP-12 系列（4MB Flash），可直接用于 ESP-12F。
+
+1. 在 VS Code 扩展商店装 **PlatformIO IDE**（已自带 C/C++ 智能提示）；装好后左侧出现
+   **蚂蚁头**图标，底部状态栏出现 ✓/→ 等 PlatformIO 按钮。
+2. 首次使用点状态栏的 **✓（Build）** 或 `Ctrl+Alt+B` 即可编译；编译会自动拉取
+   ESP8266 平台、`toolchain-xtensa` 编译器和 `PubSubClient` 库。
+3. 烧录：把 ESP-12F 用 USB-TTL（CH340/CP2102）连上电脑 → 底部状态栏 **→（Upload）**
+   或 `Ctrl+Alt+U`。裸模块需进入烧录模式（GPIO0 拉低 + 复位；若板子带自动下载电路则免手动）。
+4. 看日志：状态栏 **插头（Serial Monitor）** 或 `pio device monitor`（波特率 115200）。
+
 ```bash
-pip install platformio
+# 命令行等价操作（需在工程目录内）
+pio run                  # 编译
 pio run -t upload        # 烧录
-pio device monitor       # 看串口日志
+pio device monitor       # 看串口日志（115200）
 ```
+
+> **首次编译/烧录会联网下载工具链**：ESP8266 平台、`toolchain-xtensa` 编译器、`PubSubClient`
+> 库会在第一次 `pio run` / Upload 时自动下载。由于网络原因可能较慢，工程已内置清华镜像
+> （`platformio.ini` 的 `[platformio] default_mirrors`），无需手动配置；若仍中断，可临时在命令前加
+> `PLATFORMIO_DEFAULT_MIRRORS="https://mirrors.tuna.tsinghua.edu.cn/platformio/"`。
+> 下载好的工具链会落到工程内 `piocore/` 目录（已在 `.gitignore` 忽略，不入库）。
+>
+> **工程结构注意**：PlatformIO 只编译 `src/` 下的源码，因此主程序是 `src/esp8266_controller.ino`
+> （不再是根目录）。直接用 Arduino IDE 打开时请打开 `src/` 里的这个文件。
 
 ### 方式 C：下载 GitHub Actions 预编译固件（无需本地编译环境）
 本仓库已配置 GitHub Actions（`build-firmware.yml`），每次推送都会自动编译出固件

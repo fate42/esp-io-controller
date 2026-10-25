@@ -3,6 +3,8 @@ android_app/app/build/
 build/
 .gradle/
 .pio/
+# PlatformIO 核心目录（工具链/框架，已本地化到工程内，体积大不入库）
+piocore/
 dist/
 *.apk
 local.properties

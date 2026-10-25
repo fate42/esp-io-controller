@@ -1,0 +1,16 @@
+{
+  // 让 VS Code 内置终端与 PlatformIO 扩展都用工程内已下载好的核心目录（piocore），
+  // 这样首次烧录不必再联网下载几百 MB 的 ESP8266 工具链。
+  "terminal.integrated.env.windows": {
+    "PLATFORMIO_CORE_DIR": "C:/Users/23874/WorkBuddy/2026-10-24-23-58-51/esp-io-controller/esp8266_controller/piocore"
+  },
+  // 使用扩展自带的 PlatformIO Core，避免再去读系统全局 ~/.platformio
+  "platformio-ide.useBuiltinPIOCore": true,
+  // 关闭自动重建索引（小工程没必要，且会触发联网）
+  "platformio-ide.autoRebuildAutocomplete": false,
+  // .ino 当 C++ 处理，启用语法高亮/补全
+  "files.associations": {
+    "*.ino": "cpp"
+  },
+  "C_Cpp.intelliSenseEngine": "default"
+}

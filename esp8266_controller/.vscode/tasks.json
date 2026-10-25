@@ -1,0 +1,40 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PIO: Build（编译）",
+      "type": "shell",
+      "command": "pio run",
+      "options": {
+        "env": {
+          "PLATFORMIO_CORE_DIR": "C:/Users/23874/WorkBuddy/2026-10-24-23-58-51/esp-io-controller/esp8266_controller/piocore"
+        }
+      },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Upload（一键烧录）",
+      "type": "shell",
+      "command": "pio run -t upload",
+      "options": {
+        "env": {
+          "PLATFORMIO_CORE_DIR": "C:/Users/23874/WorkBuddy/2026-10-24-23-58-51/esp-io-controller/esp8266_controller/piocore"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Monitor（串口监视）",
+      "type": "shell",
+      "command": "pio device monitor -b 115200",
+      "options": {
+        "env": {
+          "PLATFORMIO_CORE_DIR": "C:/Users/23874/WorkBuddy/2026-10-24-23-58-51/esp-io-controller/esp8266_controller/piocore"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
