@@ -96,6 +96,12 @@ class MqttManager {
         return true
     }
 
+    /** 切换控制目标：先断开旧连接（否则 broker 上会残留旧订阅），再连新设备 */
+    fun switchTo(deviceId: String, onConnected: () -> Unit = {}) {
+        disconnect()
+        connect(deviceId, onConnected)
+    }
+
     /** 断开 MQTT 连接，但保留线程池，之后还能 connect() */
     fun disconnect() {
         try { client?.disconnect() } catch (e: Exception) { /* ignore */ }

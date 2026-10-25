@@ -25,19 +25,26 @@ ESP8266 的 4 个 GPIO（GPIO12/13/14/16），每次按下给对应 IO 一个 **
 1. **烧录固件**：用 Arduino IDE（或 PlatformIO）把 `esp8266_controller/esp8266_controller.ino`
    烧录到 ESP8266（详见其目录内 README）。CI 产出的 `esp8266-io-controller-0x00000.bin`
    烧录地址为 **0x0**（不是 ESP32 的 0x10000）。
-2. **配网**：ESP 上电后，手机 WiFi 列表出现 `ESP_XXXXXX` 热点（密码 `espconfig`）；
-   打开 App → 自动进入「配网」页 → 点「扫描 ESP 热点」→ 选中热点 →
-   **首次连接时系统可能弹出"允许加入网络"确认框，请点允许** → 输入家中 WiFi
-   SSID/密码 → 点「发送配置并连接」。
-   - Android 10 以上不再使用已废弃的 `addNetwork` 接口，改为
-     `WifiNetworkSpecifier + requestNetwork`，并在请求里移除 `NET_CAPABILITY_INTERNET`
-     （否则系统认为热点"没有互联网"而拒绝回调）。
-   - 发送配置前 App 会把进程绑定到热点网络（`bindProcessToNetwork`），否则
-     `http://192.168.4.1` 的请求会被蜂窝数据劫持而超时。
-   - Android 14 对 `startScan()` 有频率限制：若列表扫不到，请先在系统 WiFi 设置里手动
-     连上 `ESP_XXXXXX`，再回 App 点「我已手动连上 ESP 热点（绑定该网络）」。
-3. **控制**：配置成功后 App 进入「控制」页，四个按钮即可远程触发对应 GPIO 的 500ms 高脉冲；
-   页面顶部会显示设备在线/离线（离线由固件 MQTT 遗嘱消息或心跳超时判定）。
+2. **添加设备**：打开 App，默认就是**控制按键界面**；点右上角「**设置**」进入设置页，
+   三种方式添加设备：
+   - **给新 ESP 配网**（第一次用）：ESP 上电后手机 WiFi 列表出现 `ESP_XXXXXX` 热点
+     （密码 `espconfig`）→ 设置页点「给新 ESP 配网（开热点）」→ 点「扫描 ESP 热点」→
+     选中热点（**首次连接系统可能弹"允许加入网络"确认框，点允许**）→ 输入家中 WiFi
+     SSID/密码 → 点「发送配置并连接」→ 自动返回，设备出现在列表里。
+     - Android 10 以上不再用已废弃的 `addNetwork`，改为 `WifiNetworkSpecifier + requestNetwork`
+       且移除 `NET_CAPABILITY_INTERNET`（否则系统认为热点"没有互联网"而拒绝回调）；
+     - 发配置前会 `bindProcessToNetwork` 绑定热点网络，否则 `192.168.4.1` 的请求走蜂窝数据超时；
+     - Android 14 对 `startScan()` 限流：扫不到就先在系统 WiFi 设置里手动连 `ESP_XXXXXX`，
+       再回 App 点「我已手动连上 ESP 热点（绑定该网络）」。
+   - **扫码添加**（第二台及以后的手机用这个）：已在用的手机进设置页 → 点设备 →
+     「生成二维码」→ 另一台手机装好 App → 设置页「扫码添加设备」扫一下即可。
+   - **手动输入设备ID**：设置页「手动输入设备ID」，填 `ESP_A1B2C3` 这类 ID（可加备注名）。
+3. **控制**：回到控制页，顶部下拉框选择设备（可保存多台），四个按钮即可远程触发
+   对应 GPIO 的 500ms 高脉冲；页面显示设备在线/离线（固件 MQTT 遗嘱消息或心跳超时判定）。
+
+**多台手机同时控制同一台 ESP**：命令走 MQTT 主题 `esp8266/<deviceId>/cmd`，
+任何手机只要保存了这个 deviceId 就能订阅和发布，所以"把设备分享给别人"就是把
+deviceId 告诉对方（推荐扫码）。多台手机可同时在线、同时按键，固件收到一条就触发一次。
 
 **恢复出厂（忘记/改了路由器密码时）**：两种方式任选
 - 访问 `http://<ESP的IP>/reset`（联网状态）或 `http://192.168.4.1/reset`（热点状态）；

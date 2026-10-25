@@ -75,6 +75,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="我已配过网，直接进入控制" />
+            android:text="已添加过设备，直接返回" />
     </LinearLayout>
 </ScrollView>

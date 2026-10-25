@@ -100,8 +100,8 @@ class ProvisionActivity : AppCompatActivity() {
             bindCurrentWifiNetwork()
         }
         findViewById<Button>(R.id.btnSkip).setOnClickListener {
-            val id = Prefs.getDeviceId(this)
-            if (!id.isNullOrEmpty()) gotoControl() else toast("尚未配网，请先扫描并发送配置")
+            val id = DeviceStore.getSelected(this)
+            if (!id.isNullOrEmpty()) finishProvision() else toast("尚未配网，请先扫描并发送配置")
         }
 
         ensureWifiOn()
@@ -316,10 +316,13 @@ class ProvisionActivity : AppCompatActivity() {
             runOnUiThread {
                 btnSend.isEnabled = true
                 if (deviceId != null) {
+                    // 加入设备列表并设为当前（Prefs 同时写一份，兼容老版本读取）
+                    DeviceStore.add(this, Device(deviceId, deviceId))
                     Prefs.setDeviceId(this, deviceId)
                     tvStatus.append("\n配置成功，设备ID=$deviceId")
                     releaseNetwork()          // 解绑，让流量回到正常网络
-                    gotoControl()
+                    toast("已添加设备 $deviceId")
+                    handler.postDelayed({ finishProvision() }, 800)
                 } else {
                     tvStatus.append("\n配置失败：请确认手机仍连着 ESP 热点（可用浏览器访问 192.168.4.1/status 验证）")
                 }
@@ -327,8 +330,8 @@ class ProvisionActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun gotoControl() {
-        startActivity(Intent(this, ControlActivity::class.java))
+    /** 配网结束返回上一页（设置页），列表会在 onResume 里自动刷新出新设备 */
+    private fun finishProvision() {
         finish()
     }
 

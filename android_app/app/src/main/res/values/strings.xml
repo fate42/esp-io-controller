@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">ESP IO 遥控</string>
+
+    <string name="settings">设置</string>
+    <string name="no_device">设备: 未选择</string>
+    <string name="mqtt_idle">MQTT: 未连接</string>
+    <string name="state_idle">状态: -</string>
+    <string name="empty_hint">还没有设备。\n点下面的按钮去添加：可以给新 ESP 配网，也可以用另一台手机扫码加入已有设备。</string>
+    <string name="go_add_device">添加设备</string>
+
+    <string name="title_settings">设备与设置</string>
+    <string name="device_list">已保存的设备</string>
+    <string name="add_by_provision">给新 ESP 配网（开热点）</string>
+    <string name="add_by_scan">扫码添加设备</string>
+    <string name="add_by_input">手动输入设备ID</string>
+    <string name="share_device">生成二维码（给别的手机扫）</string>
+    <string name="rename_device">重命名</string>
+    <string name="delete_device">删除</string>
+    <string name="device_id_hint">设备ID，例如 ESP_A1B2C3</string>
+    <string name="device_name_hint">备注名（可留空）</string>
+    <string name="qr_title">用另一台手机扫这个码即可控制该设备</string>
+    <string name="copied">已复制设备ID</string>
+    <string name="scan_tip">请扫描另一台手机设置页里的设备二维码</string>
 </resources>
