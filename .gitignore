@@ -17,3 +17,6 @@ local.properties
 *.iml
 .idea/
 Thumbs.db
+
+# 本地临时构建日志（沙箱/排错用过）
+_build.log
