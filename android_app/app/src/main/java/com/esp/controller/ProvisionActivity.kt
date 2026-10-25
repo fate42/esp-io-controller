@@ -222,7 +222,17 @@ class ProvisionActivity : AppCompatActivity() {
         val cb = wifiNetworkCallback
         networkCallback = cb
         try {
-            connectivityManager.requestNetwork(request, cb, 30_000L)
+            // 第三参数只能用 Handler：requestNetwork(request, cb, Int) 这个带超时的重载是 API 26+ 才有的，
+            // 本工程 minSdk 21 —— 若传 30_000(Int) 虽能通过编译，但在 Android 6/7 上会 NoSuchMethodError 崩溃。
+            connectivityManager.requestNetwork(request, cb, handler)
+            // Handler 重载不带自动超时，这里补一个延时兜底：30s 后仍未绑定成功则提示并释放。
+            // 已绑定时下面的判断自然空转，因此无需额外取消该延时任务。
+            handler.postDelayed({
+                if (boundNetwork == null) {
+                    tvStatus.append("\n连接超时：未能绑定 ESP 热点，请确认已连接后重试")
+                    releaseNetwork()
+                }
+            }, 30_000L)
         } catch (e: Exception) {
             e.printStackTrace()
             tvStatus.append("\n发起网络请求失败：${e.message}")
