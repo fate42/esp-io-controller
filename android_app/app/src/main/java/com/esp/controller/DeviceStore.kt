@@ -113,14 +113,24 @@ object DeviceStore {
     }
 
     fun getSelected(ctx: Context): String? {
-        val id = sp(ctx).getString(KEY_SELECTED, null)
+        val raw = sp(ctx).getString(KEY_SELECTED, null)
+        // 旧固件存下的 selected_id 可能是被放大的长度，先裁到设备ID实际长度再比对
+        val id = when {
+            raw.isNullOrEmpty() -> null
+            raw.length > DEVICE_ID_LEN -> raw.substring(0, DEVICE_ID_LEN)
+            else -> raw
+        }
         return if (!id.isNullOrEmpty() && list(ctx).any { it.id == id }) id
                else list(ctx).firstOrNull()?.id
     }
 
     fun setSelected(ctx: Context, id: String?) {
-        if (id == null) sp(ctx).edit().remove(KEY_SELECTED).apply()
-        else sp(ctx).edit().putString(KEY_SELECTED, id).apply()
+        if (id == null) {
+            sp(ctx).edit().remove(KEY_SELECTED).apply()
+        } else {
+            val nid = if (id.length > DEVICE_ID_LEN) id.substring(0, DEVICE_ID_LEN) else id
+            sp(ctx).edit().putString(KEY_SELECTED, nid).apply()
+        }
     }
 
     fun find(ctx: Context, id: String): Device? = list(ctx).firstOrNull { it.id == id }
