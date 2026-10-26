@@ -48,6 +48,7 @@ class ControlActivity : AppCompatActivity() {
     companion object {
         private const val OFFLINE_TIMEOUT_MS = 25_000L   // 固件心跳 10s，留 2 倍余量
         private const val WATCHDOG_INTERVAL_MS = 3_000L
+        private const val FEEDBACK_MS = 3_000L           // 操作反馈停留时长，到点自动消失
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,9 +91,9 @@ class ControlActivity : AppCompatActivity() {
                         return@setOnClickListener
                     }
                     if (manager.sendPulse(Constants.GPIO_PINS[i])) {
-                        tvState.text = getString(R.string.pressed_fmt, names[i])
+                        showFeedback(getString(R.string.pressed_fmt, names[i]))
                     } else {
-                        tvState.text = getString(R.string.press_failed)
+                        showFeedback(getString(R.string.press_failed))
                     }
                 }
             }
@@ -171,6 +172,16 @@ class ControlActivity : AppCompatActivity() {
     private fun productIdLabel(id: String): String =
         if (id.length > 4) "遥控器 · ${id.takeLast(4)}" else id
 
+    /** 操作反馈若干秒后自动清空，避免"XX按键已按下"一直挂在界面上 */
+    private val clearFeedback = Runnable { tvState.text = "" }
+
+    private fun showFeedback(msg: String) {
+        tvState.text = msg
+        // 先撤掉上一次的定时，连按时以最后一次按下重新计时，不会被前一次提前清掉
+        handler.removeCallbacks(clearFeedback)
+        handler.postDelayed(clearFeedback, FEEDBACK_MS)
+    }
+
     private val watchdog = object : Runnable {
         override fun run() {
             if (lastStateAt != 0L && System.currentTimeMillis() - lastStateAt > OFFLINE_TIMEOUT_MS) {
@@ -200,6 +211,7 @@ class ControlActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         handler.removeCallbacks(watchdog)
+        handler.removeCallbacks(clearFeedback)
         mqtt?.release()
         mqtt = null
         super.onDestroy()
