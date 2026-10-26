@@ -177,11 +177,19 @@ void seedRandom() {
 }
 
 // 输出长度为 chars 的全小写十六进制串，每位 0~255 的随机字节转成 2 个 hex 字符
+//
+// 【v1.4 修复】原来循环 chars 次、每次产出 2 个字符，实际长度是 2*chars：
+//   genHex(16) 生成 32 位，而 EEPROM 的 DEVID_MAX=16 只存前 16 位 →
+//   配网响应回给手机的是 32 位、设备重启后读到的是 16 位，MQTT 主题（io/<id>/state）
+//   两端不一致，手机永远收不到状态、命令也发不到设备（表现为"串口已连接、App 却显示无响应"）。
+//   同理密钥 64 位 vs 存 32 位会让鉴权必然 denied。
+//   这里改为按 chars/2 次生成，保证长度严格等于 chars，与 DEVID_MAX/KEY_MAX 对齐。
 String genHex(int chars) {
   seedRandom();
   String s = "";
   char h[3];
-  for (int i = 0; i < chars; i++) {
+  int n = (chars + 1) / 2;             // 向上取整，保证长度不小于 chars（chars 为奇数时多补 1 位）
+  for (int i = 0; i < n; i++) {
     snprintf(h, sizeof(h), "%02x", (uint8_t)random(0, 256));
     s += h;
   }
