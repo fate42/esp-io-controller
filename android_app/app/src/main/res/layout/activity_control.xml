@@ -164,11 +164,12 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <!-- 左下角连接状态 -->
+    <!-- 左下角连接状态 + 右下角版本号 -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="22dp"
+        android:layout_marginEnd="22dp"
         android:layout_marginBottom="20dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
@@ -187,5 +188,17 @@
             android:text="@string/status_off"
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tvVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

@@ -26,6 +26,7 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var dotStatus: View
     private lateinit var tvState: TextView
+    private lateinit var tvVersion: TextView
     private lateinit var gridButtons: GridLayout
     private lateinit var emptyView: LinearLayout
 
@@ -64,6 +65,8 @@ class ControlActivity : AppCompatActivity() {
         tvState = findViewById(R.id.tvState)
         gridButtons = findViewById(R.id.gridButtons)
         emptyView = findViewById(R.id.emptyView)
+        tvVersion = findViewById(R.id.tvVersion)
+        tvVersion.text = appVersion()      // 右下角显示版本，便于确认手机上跑的是哪个构建
 
         findViewById<ImageButton>(R.id.btnSettings).setOnClickListener { openSettings() }
         findViewById<Button>(R.id.btnGoSettings).setOnClickListener { openSettings() }
@@ -215,6 +218,14 @@ class ControlActivity : AppCompatActivity() {
         mqtt?.release()
         mqtt = null
         super.onDestroy()
+    }
+
+    /** 右下角版本号，例如「v1.4.1」。用 PackageManager 读取，不依赖 BuildConfig 生成开关 */
+    private fun appVersion(): String = try {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        "v${info.versionName}"
+    } catch (e: Exception) {
+        ""
     }
 
     private fun toast(s: String) {
