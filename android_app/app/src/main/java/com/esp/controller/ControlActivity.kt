@@ -7,16 +7,16 @@ import android.os.Looper
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 /**
  * 控制页 —— App 打开后的默认界面。
  *
- * v1.2：
- *   1) 不再一上来就跳配网页：即使没有设备也停留在本页，用空状态引导去「设置」添加。
- *   2) 顶部 Spinner 可在多台设备间切换（一个 App 可管多台 ESP）。
- *   3) 右上角「设置」进 SettingsActivity：配网新设备 / 扫码加入 / 二维码分享 / 删除重命名。
- *   4) 多部手机只要保存了同一份配对信息(deviceId+key)，就能同时控制同一台 ESP
- *      （MQTT 主题随机不可猜，且命令需带密钥才执行；扫码分享即可让另一部手机配对）。
+ * v1.4（车库门钥匙）：
+ *   1) 四个按键改为车库门语义：开门 / 关门 / 锁门 / 停止（不再暴露 GPIO 编号）。
+ *   2) 移除「MQTT: xxx」技术文案，左下角只用一个圆点 + 已连接 / 断开 表示遥控器是否在线。
+ *   3) 操作反馈改为自然语言：「开门按键已按下」。
+ *   4) 界面按消费级 App 重做：大圆角按键、浅色卡片、图标化设置入口。
  */
 class ControlActivity : AppCompatActivity() {
 
@@ -24,6 +24,7 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var spDevice: Spinner
     private lateinit var tvDevice: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var dotStatus: View
     private lateinit var tvState: TextView
     private lateinit var gridButtons: GridLayout
     private lateinit var emptyView: LinearLayout
@@ -34,6 +35,15 @@ class ControlActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var lastStateAt = 0L
     private var deviceOnline = false
+
+    /** 四个按键的显示名，与 Constants.GPIO_PINS 顺序一一对应 */
+    private val labels: Array<String>
+        get() = arrayOf(
+            getString(R.string.btn_open),
+            getString(R.string.btn_close),
+            getString(R.string.btn_lock),
+            getString(R.string.btn_stop)
+        )
 
     companion object {
         private const val OFFLINE_TIMEOUT_MS = 25_000L   // 固件心跳 10s，留 2 倍余量
@@ -49,11 +59,12 @@ class ControlActivity : AppCompatActivity() {
         spDevice = findViewById(R.id.spDevice)
         tvDevice = findViewById(R.id.tvDevice)
         tvStatus = findViewById(R.id.tvStatus)
+        dotStatus = findViewById(R.id.dotStatus)
         tvState = findViewById(R.id.tvState)
         gridButtons = findViewById(R.id.gridButtons)
         emptyView = findViewById(R.id.emptyView)
 
-        findViewById<Button>(R.id.btnSettings).setOnClickListener { openSettings() }
+        findViewById<ImageButton>(R.id.btnSettings).setOnClickListener { openSettings() }
         findViewById<Button>(R.id.btnGoSettings).setOnClickListener { openSettings() }
 
         spDevice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -63,20 +74,26 @@ class ControlActivity : AppCompatActivity() {
                 DeviceStore.setSelected(this@ControlActivity, d.id)
                 bindDevice(d.id)
             }
+
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        val labels = arrayOf("按钮1 (GPIO12)", "按钮2 (GPIO13)", "按钮3 (GPIO14)", "按钮4 (GPIO16)")
+        val names = labels
         val btnIds = intArrayOf(R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4)
         for (i in 0..3) {
             findViewById<Button>(btnIds[i]).apply {
-                text = labels[i]
+                text = names[i]
                 setOnClickListener {
                     val manager = mqtt
-                    if (manager == null) { toast("请先添加设备"); return@setOnClickListener }
-                    val ok = manager.sendPulse(Constants.GPIO_PINS[i])
-                    tvState.text = if (ok) "已发送脉冲 -> GPIO${Constants.GPIO_PINS[i]}"
-                                   else "发送失败：MQTT 未连接"
+                    if (manager == null) {
+                        toast(getString(R.string.go_add_device))
+                        return@setOnClickListener
+                    }
+                    if (manager.sendPulse(Constants.GPIO_PINS[i])) {
+                        tvState.text = getString(R.string.pressed_fmt, names[i])
+                    } else {
+                        tvState.text = getString(R.string.press_failed)
+                    }
                 }
             }
         }
@@ -96,7 +113,7 @@ class ControlActivity : AppCompatActivity() {
     /** 重新读取设备列表并刷新下拉框（从设置页返回时会走这里） */
     private fun refreshDevices() {
         devices = DeviceStore.list(this)
-        val names = devices.map { if (it.name == it.id) it.id else "${it.name}（${it.id}）" }
+        val names = devices.map { if (it.name == it.id) it.id else it.name }
         spDevice.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
 
         val selected = DeviceStore.getSelected(this)
@@ -108,13 +125,14 @@ class ControlActivity : AppCompatActivity() {
         val hasDevice = devices.isNotEmpty()
         emptyView.visibility = if (hasDevice) View.GONE else View.VISIBLE
         gridButtons.visibility = if (hasDevice) View.VISIBLE else View.GONE
-        spDevice.visibility = if (hasDevice) View.VISIBLE else View.GONE
+        spDevice.visibility = if (devices.size > 1) View.VISIBLE else View.GONE
 
         if (selected == null) {
             tvDevice.text = getString(R.string.no_device)
-            tvStatus.text = getString(R.string.mqtt_idle)
-            tvState.text = getString(R.string.state_idle)
+            tvState.text = ""
             mqtt?.disconnect()
+            deviceOnline = false
+            renderStatus(connected = false)
             return
         }
         bindDevice(selected)
@@ -125,29 +143,33 @@ class ControlActivity : AppCompatActivity() {
         val dev = DeviceStore.find(this, deviceId)
         val name = dev?.name ?: deviceId
         val key = dev?.key ?: ""
-        tvDevice.text = if (name == deviceId) "设备: $deviceId" else "设备: $name（$deviceId）"
+        tvDevice.text = if (name == deviceId) productIdLabel(deviceId) else name
 
         val manager = mqtt ?: MqttManager().also {
             it.onConnectionChange = { connected ->
-                tvStatus.text = if (connected) "MQTT: 已连接 ✓" else "MQTT: 断开 ✗"
-                if (!connected) markOffline()
+                if (!connected) markOffline() else updateStatus()
             }
             it.onState = { s ->
                 lastStateAt = System.currentTimeMillis()
                 deviceOnline = !s.contains("offline")
-                tvState.text = "状态: $s"
-                updateOnlineLabel()
+                updateStatus()
             }
-            it.onError = { msg -> toast(msg) }
+            it.onError = { msg -> /* 技术错误不再打扰用户，仅在状态灯上体现 */ }
             mqtt = it
         }
 
         if (manager.deviceId == deviceId && manager.deviceKey == key && manager.isConnected()) return
         lastStateAt = 0L
         deviceOnline = false
-        tvStatus.text = "MQTT: 连接中…"
+        tvStatus.text = getString(R.string.status_connecting)
+        dotStatus.setBackgroundResource(R.drawable.dot_off)
+        tvStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         manager.switchTo(deviceId, key) {}
     }
+
+    /** 设备ID 展示成「遥控器 · 后4位」，比整串 hex 更友好 */
+    private fun productIdLabel(id: String): String =
+        if (id.length > 4) "遥控器 · ${id.takeLast(4)}" else id
 
     private val watchdog = object : Runnable {
         override fun run() {
@@ -160,16 +182,20 @@ class ControlActivity : AppCompatActivity() {
 
     private fun markOffline() {
         deviceOnline = false
-        updateOnlineLabel()
+        updateStatus()
     }
 
-    private fun updateOnlineLabel() {
-        val connected = mqtt?.isConnected() == true
-        tvStatus.text = when {
-            !connected   -> "MQTT: 断开 ✗"
-            deviceOnline -> "MQTT: 已连接 ✓  设备在线"
-            else         -> "MQTT: 已连接 ✓  设备离线"
-        }
+    /** 只有「服务器已连上」且「遥控器心跳新鲜」才算已连接 */
+    private fun updateStatus() {
+        renderStatus(connected = mqtt?.isConnected() == true && deviceOnline)
+    }
+
+    private fun renderStatus(connected: Boolean) {
+        tvStatus.text = getString(if (connected) R.string.status_on else R.string.status_off)
+        tvStatus.setTextColor(
+            ContextCompat.getColor(this, if (connected) R.color.status_on else R.color.text_secondary)
+        )
+        dotStatus.setBackgroundResource(if (connected) R.drawable.dot_on else R.drawable.dot_off)
     }
 
     override fun onDestroy() {

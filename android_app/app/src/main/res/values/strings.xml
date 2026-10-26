@@ -1,24 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ESP IO 遥控</string>
+    <string name="app_name">车库门钥匙</string>
 
     <string name="settings">设置</string>
-    <string name="no_device">设备: 未选择</string>
-    <string name="mqtt_idle">MQTT: 未连接</string>
-    <string name="state_idle">状态: -</string>
-    <string name="empty_hint">还没有设备。\n点下面的按钮去添加：可以给新 ESP 配网，也可以用另一台手机扫码加入已有设备。</string>
-    <string name="go_add_device">添加设备</string>
+    <string name="no_device">未添加遥控器</string>
+    <string name="mqtt_idle">未连接</string>
+    <string name="state_idle">-</string>
+    <string name="empty_hint">还没有遥控器。\n点下面的按钮添加：可以给新控制器配网，也可以用另一台手机扫码加入。</string>
+    <string name="go_add_device">添加遥控器</string>
 
+    <!-- 四个控制键 -->
+    <string name="btn_open">开门</string>
+    <string name="btn_close">关门</string>
+    <string name="btn_lock">锁门</string>
+    <string name="btn_stop">停止</string>
+
+    <!-- 连接状态 -->
+    <string name="status_on">已连接</string>
+    <string name="status_off">断开</string>
+    <string name="status_connecting">连接中…</string>
+    <string name="pressed_fmt">%1$s按键已按下</string>
+    <string name="press_failed">连接断开，操作未发送</string>
+
+    <!-- 设置页 -->
     <string name="title_settings">设备与设置</string>
-    <string name="device_list">已保存的设备</string>
-    <string name="add_by_provision">给新 ESP 配网（开热点）</string>
-    <string name="add_by_scan">扫码添加设备</string>
-    <string name="add_by_input">手动输入设备ID</string>
+    <string name="device_list">已保存的遥控器</string>
+    <string name="add_by_provision">添加遥控器（配网）</string>
+    <string name="add_by_scan">扫码添加遥控器</string>
+    <string name="add_by_input">手动输入遥控器ID</string>
     <string name="share_device">生成二维码（给别的手机扫）</string>
     <string name="rename_device">重命名</string>
     <string name="delete_device">删除</string>
-    <string name="device_id_hint">设备ID，例如 ESP_A1B2C3</string>
+    <string name="device_id_hint">遥控器ID，例如 ESP_A1B2C3</string>
     <string name="device_name_hint">备注名（可留空）</string>
-    <string name="qr_title">用另一台手机扫这个码即可控制该设备</string>
-    <string name="copied">已复制设备ID</string>
-    <string name="scan_tip">请扫描另一台手机设置页里的设备二维码</string>
+    <string name="qr_title">用另一台手机扫这个码即可控制该遥控器</string>
+    <string name="copied">已复制遥控器信息</string>
+    <string name="scan_tip">请扫描另一台手机设置页里的遥控器二维码</string>
+
+    <!-- 设置页：连接状态卡片 -->
+    <string name="remote_status">遥控器连接状态</string>
+    <string name="remote_status_unknown">未查询</string>
+    <string name="check_now">刷新状态</string>
+    <string name="status_online">已连接（在线）</string>
+    <string name="status_offline">未连接（离线）</string>
+    <string name="status_timeout">无响应（可能离线）</string>
+    <string name="status_broker_fail">无法连接服务器</string>
+    <string name="status_no_device">未添加遥控器</string>
+    <string name="status_checking">查询中…</string>
 </resources>

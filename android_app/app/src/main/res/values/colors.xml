@@ -1,6 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#6750A4</color>
-    <color name="purple_700">#21005D</color>
-    <color name="teal_200">#FF03DAC5</color>
+    <!-- 老主题引用保留，避免其它页面取不到 -->
+    <color name="purple_500">#0EA5E9</color>
+    <color name="purple_700">#0284C7</color>
+    <color name="teal_200">#22D3EE</color>
+
+    <!-- 图标底色（与启动图一致） -->
+    <color name="ic_launcher_background">#0B0F14</color>
+
+    <!-- 基础界面配色：浅色、干净、消费级 -->
+    <color name="bg">#F4F5F7</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="divider">#E5E7EB</color>
+    <color name="accent">#0EA5E9</color>
+
+    <!-- 四键配色 -->
+    <color name="btn_open">#16A34A</color>
+    <color name="btn_close">#2563EB</color>
+    <color name="btn_lock">#7C3AED</color>
+    <color name="btn_stop">#DC2626</color>
+
+    <!-- 连接状态 -->
+    <color name="status_on">#22C55E</color>
+    <color name="status_off">#9CA3AF</color>
 </resources>

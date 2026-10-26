@@ -1,14 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="28dp">
 
+        <!-- 顶部 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -20,56 +27,139 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/title_settings"
-                android:textSize="20sp"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="返回" />
+                android:text="返回"
+                android:textAllCaps="false"
+                android:textColor="@color/accent" />
         </LinearLayout>
 
-        <TextView
+        <!-- 遥控器连接状态 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/device_list"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp">
 
-        <ListView
-            android:id="@+id/lvDevices"
+            <TextView
+                style="@style/SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/remote_status" />
+
+            <TextView
+                android:id="@+id/tvRemoteStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/remote_status_unknown"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvRemoteDevice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCheckStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/check_now"
+                android:textAllCaps="false"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                app:backgroundTint="@color/surface"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/accent"
+                app:strokeWidth="1dp" />
+        </LinearLayout>
+
+        <!-- 设备列表 -->
+        <TextView
+            style="@style/SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="@string/device_list" />
+
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:layout_marginTop="8dp" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="4dp">
 
-        <Button
+            <ListView
+                android:id="@+id/lvDevices"
+                android:layout_width="match_parent"
+                android:layout_height="190dp"
+                android:divider="@color/divider"
+                android:dividerHeight="1dp" />
+        </LinearLayout>
+
+        <!-- 添加方式 -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnProvision"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/add_by_provision" />
+            android:layout_height="54dp"
+            android:layout_marginTop="18dp"
+            android:text="@string/add_by_provision"
+            android:textAllCaps="false"
+            android:textSize="15sp"
+            app:backgroundTint="@color/accent"
+            app:cornerRadius="16dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnScan"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/add_by_scan" />
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/add_by_scan"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            app:backgroundTint="@color/surface"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnManual"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/add_by_input" />
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/add_by_input"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            app:backgroundTint="@color/surface"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="多台手机控制同一台 ESP：在这台手机上选中设备 →「生成二维码」（二维码含设备ID与密钥），另一台手机安装本 App 后用「扫码添加设备」扫一下即可配对。v1.3 起 MQTT 主题为随机的 io/&lt;设备ID&gt;/cmd 且命令需带密钥，只有持有密钥的手机才能控制。"
-            android:textSize="13sp" />
+            android:layout_marginTop="18dp"
+            android:lineSpacingExtra="3dp"
+            android:text="多台手机控制同一台遥控器：在已配对的手机上选中设备 →「生成二维码」，另一台手机安装本 App 后用「扫码添加」扫一下即可。二维码里含设备ID与密钥，只有持有密钥的手机才能控制。"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

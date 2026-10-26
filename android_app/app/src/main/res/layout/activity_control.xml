@@ -1,118 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_horizontal"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/bg"
+    android:orientation="vertical">
 
+    <!-- 顶部：标题 + 设置 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp">
 
-        <Spinner
-            android:id="@+id/spDevice"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:spinnerMode="dialog" />
+            android:orientation="vertical">
 
-        <Button
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDevice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="@string/no_device"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
             android:id="@+id/btnSettings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/settings" />
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/settings"
+            android:padding="10dp"
+            android:src="@drawable/ic_settings" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvDevice"
-        android:layout_width="wrap_content"
+    <!-- 多设备切换 -->
+    <Spinner
+        android:id="@+id/spDevice"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/no_device"
-        android:textSize="18sp" />
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
         android:layout_marginTop="4dp"
-        android:text="@string/mqtt_idle"
-        android:textSize="16sp" />
+        android:layout_marginEnd="16dp"
+        android:spinnerMode="dialog" />
 
-    <TextView
-        android:id="@+id/tvState"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="@string/state_idle"
-        android:textSize="14sp" />
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
+    <!-- 四键 -->
     <GridLayout
         android:id="@+id/gridButtons"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
         android:columnCount="2"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         android:rowCount="2">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn1"
+            style="@style/ControlButton"
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="104dp"
             android:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            android:text="按钮1" />
+            android:layout_margin="7dp"
+            android:text="@string/btn_open"
+            app:backgroundTint="@color/btn_open" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn2"
+            style="@style/ControlButton"
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="104dp"
             android:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            android:text="按钮2" />
+            android:layout_margin="7dp"
+            android:text="@string/btn_close"
+            app:backgroundTint="@color/btn_close" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn3"
+            style="@style/ControlButton"
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="104dp"
             android:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            android:text="按钮3" />
+            android:layout_margin="7dp"
+            android:text="@string/btn_lock"
+            app:backgroundTint="@color/btn_lock" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn4"
+            style="@style/ControlButton"
             android:layout_width="0dp"
-            android:layout_height="120dp"
+            android:layout_height="104dp"
             android:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            android:text="按钮4" />
+            android:layout_margin="7dp"
+            android:text="@string/btn_stop"
+            app:backgroundTint="@color/btn_stop" />
     </GridLayout>
 
+    <!-- 操作反馈：XX按键已按下 -->
+    <TextView
+        android:id="@+id/tvState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:minHeight="26dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <!-- 空状态 -->
     <LinearLayout
         android:id="@+id/emptyView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
         android:gravity="center_horizontal"
         android:orientation="vertical"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
         android:visibility="gone">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:lineSpacingExtra="4dp"
             android:text="@string/empty_hint"
-            android:textSize="15sp" />
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGoSettings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/go_add_device" />
+            android:layout_marginTop="16dp"
+            android:text="@string/go_add_device"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/accent"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- 左下角连接状态 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="22dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/dotStatus"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
+            android:background="@drawable/dot_off" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/status_off"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>
